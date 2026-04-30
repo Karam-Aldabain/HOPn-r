@@ -1,0 +1,237 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  SUPER_ADMIN
+  CONTENT_MANAGER
+  MARKETING_CRM_MANAGER
+  EDITOR
+  TECHNICAL_ADMIN
+}
+
+enum LeadStatus {
+  NEW
+  CONTACTED
+  QUALIFIED
+  WON
+  LOST
+}
+
+enum PageStatus {
+  DRAFT
+  PUBLISHED
+}
+
+model AdminUser {
+  id           Int       @id @default(autoincrement())
+  name         String
+  email        String    @unique
+  role         UserRole  @default(CONTENT_MANAGER)
+  passwordHash String
+  lastLogin    DateTime?
+  status       String    @default("ACTIVE")
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  auditLogs    AuditLog[] @relation("AdminUserAuditLogs")
+  leadNotes    LeadNote[] @relation("AdminUserLeadNotes")
+  leadStatusHistory LeadStatusHistory[] @relation("AdminUserLeadStatusHistory")
+  refreshTokens RefreshToken[]
+  resetTokens   PasswordResetToken[]
+}
+
+model Page {
+  id            Int       @id @default(autoincrement())
+  slug          String    @unique
+  title         String
+  seoTitle      String?
+  seoDescription String?
+  ogImage       String?
+  status        PageStatus @default(PUBLISHED)
+  publishedAt   DateTime?
+  sections      Section[]
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model RefreshToken {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  tokenHash String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  user      AdminUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model PasswordResetToken {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  tokenHash String   @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+  user      AdminUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Section {
+  id         Int      @id @default(autoincrement())
+  pageId     Int
+  type       String
+  contentJson Json
+  visible    Boolean  @default(true)
+  order      Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  page       Page     @relation(fields: [pageId], references: [id], onDelete: Cascade)
+}
+
+model Solution {
+  id                 Int      @id @default(autoincrement())
+  title              String
+  description        String
+  caseSnippet        String?
+  bulletsProblems    String[] @default([])
+  bulletsDeliverables String[] @default([])
+  icon               String?
+  ctaLabel           String?
+  ctaUrl             String?
+  visible            Boolean  @default(true)
+  order              Int      @default(0)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+}
+
+model Project {
+  id           Int      @id @default(autoincrement())
+  title        String
+  shortDesc    String
+  longDesc     String?
+  industry     String
+  techTags     String[] @default([])
+  coverImage   String?
+  gallery      String[] @default([])
+  highlights   String[] @default([])
+  externalUrl  String?
+  featured     Boolean  @default(false)
+  published    Boolean  @default(false)
+  order        Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Partner {
+  id               Int      @id @default(autoincrement())
+  name             String
+  logo             String?
+  url              String?
+  description      String?
+  partnershipType  String?
+  visible          Boolean  @default(true)
+  order            Int      @default(0)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+model TeamMember {
+  id          Int      @id @default(autoincrement())
+  name        String
+  role        String
+  photo       String?
+  bio         String?
+  linkedinUrl String?
+  visible     Boolean  @default(true)
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model LeadSubmission {
+  id        Int       @id @default(autoincrement())
+  name      String
+  email     String
+  company   String?
+  topic     String
+  message   String
+  consent   Boolean
+  status    LeadStatus @default(NEW)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  notes     LeadNote[]
+  statusHistory LeadStatusHistory[]
+}
+
+model MediaAsset {
+  id        Int      @id @default(autoincrement())
+  fileUrl   String
+  type      String
+  altText   String
+  tags      String[] @default([])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Setting {
+  id        Int      @id @default(autoincrement())
+  key       String   @unique
+  valueJson Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model NavItem {
+  id        Int      @id @default(autoincrement())
+  label     String
+  url       String
+  location  String   @default("HEADER")
+  isCta     Boolean  @default(false)
+  external  Boolean  @default(false)
+  order     Int      @default(0)
+  visible   Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model LeadNote {
+  id        Int       @id @default(autoincrement())
+  leadId    Int
+  body      String
+  createdAt DateTime  @default(now())
+  createdBy Int?
+  lead      LeadSubmission @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  adminUser AdminUser? @relation("AdminUserLeadNotes", fields: [createdBy], references: [id], onDelete: SetNull)
+}
+
+model LeadStatusHistory {
+  id        Int       @id @default(autoincrement())
+  leadId    Int
+  fromStatus LeadStatus?
+  toStatus  LeadStatus
+  changedAt DateTime  @default(now())
+  changedBy Int?
+  lead      LeadSubmission @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  adminUser AdminUser? @relation("AdminUserLeadStatusHistory", fields: [changedBy], references: [id], onDelete: SetNull)
+}
+
+model PartnerSettings {
+  id            Int      @id @default(autoincrement())
+  displayMode   String   @default("carousel")
+  carouselSpeed Int      @default(30)
+  updatedAt     DateTime @updatedAt
+  createdAt     DateTime @default(now())
+}
+
+model AuditLog {
+  id         Int      @id @default(autoincrement())
+  entityType String
+  entityId   String
+  action     String
+  diffJson   Json?
+  changedBy  Int?
+  timestamp  DateTime @default(now())
+  adminUser  AdminUser? @relation("AdminUserAuditLogs", fields: [changedBy], references: [id], onDelete: SetNull)
+}

@@ -1,0 +1,22 @@
+{
+  "kind": "collectionType",
+  "collectionName": "navigation",
+  "info": {
+    "singularName": "navigation",
+    "pluralName": "navigation",
+    "displayName": "Navigation"
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "attributes": {
+    "location": {
+      "type": "enumeration",
+      "enum": ["header", "footer"],
+      "required": true
+    },
+    "items_json": {
+      "type": "json"
+    }
+  }
+}

@@ -1,0 +1,62 @@
+
+> web@0.1.0 dev
+> set NODE_OPTIONS=--max-old-space-size=4096 && next dev
+
+⚠ You are using a non-standard "NODE_ENV" value in your environment. This creates inconsistencies in the project and is strongly advised against. Read more: https://nextjs.org/docs/messages/non-standard-node-env
+⚠ Warning: Next.js inferred your workspace root, but it may not be correct.
+ We detected multiple lockfiles and selected the directory of C:\Users\Magic Systems\Desktop\HOPN\package-lock.json as the root directory.
+ To silence this warning, set `turbopack.root` in your Next.js config, or consider removing one of the lockfiles if it's not needed.
+   See https://nextjs.org/docs/app/api-reference/config/next-config-js/turbopack#root-directory for more information.
+ Detected additional lockfiles: 
+   * C:\Users\Magic Systems\Desktop\HOPN\apps\web\package-lock.json
+
+▲ Next.js 16.1.4 (Turbopack)
+- Local:         http://localhost:3000
+- Network:       http://192.168.100.9:3000
+- Environments: .env
+
+✓ Starting...
+Creating turbopack project {
+  dir: 'C:\\Users\\Magic Systems\\Desktop\\HOPN\\apps\\web',
+  testMode: true
+}
+✓ Ready in 7s
+○ Compiling / ...
+ GET / 200 in 6.9s (compile: 6.1s, render: 808ms)
+ GET / 200 in 46ms (compile: 11ms, render: 35ms)
+ GET / 200 in 46ms (compile: 5ms, render: 41ms)
+ GET /labs 200 in 579ms (compile: 399ms, render: 179ms)
+ GET /contact 200 in 1342ms (compile: 1293ms, render: 49ms)
+ GET /admin 200 in 999ms (compile: 862ms, render: 137ms)
+ GET /admin/login 200 in 1274ms (compile: 1156ms, render: 118ms)
+ GET /admin 200 in 35ms (compile: 6ms, render: 28ms)
+ GET /admin 200 in 135ms (compile: 14ms, render: 120ms)
+○ Compiling /admin/pages ...
+ GET /admin/pages 200 in 5.8s (compile: 5.5s, render: 287ms)
+ GET /admin/pages 200 in 249ms (compile: 9ms, render: 240ms)
+ GET /admin/nav 200 in 2.3s (compile: 2.2s, render: 77ms)
+ GET /admin/solutions 200 in 2.3s (compile: 2.3s, render: 53ms)
+ GET /admin/projects 200 in 396ms (compile: 318ms, render: 78ms)
+○ Compiling /admin/partners ...
+ GET /admin/partners 200 in 3.6s (compile: 3.5s, render: 44ms)
+ GET / 200 in 978ms (compile: 135ms, render: 843ms)
+○ Compiling /partners ...
+ GET /partners 200 in 6.3s (compile: 6.1s, render: 141ms)
+ GET /partners/innovatech.jpg 404 in 3.6s (compile: 2.9s, render: 741ms)
+ GET /partners/future-finance.jpg 404 in 3.6s (compile: 3.1s, render: 491ms)
+ GET /partners/global-university.jpg 404 in 3.6s (compile: 3.0s, render: 549ms)
+ GET /partners/ecosolutions.jpg 404 in 3.6s (compile: 3.1s, render: 455ms)
+ GET /fintech-innovations 200 in 1686ms (compile: 1625ms, render: 61ms)
+○ Compiling /insights ...
+ GET /insights 200 in 4.6s (compile: 4.4s, render: 194ms)
+✓ Compiled in 5s
+ GET /insights 200 in 1744ms (compile: 420ms, render: 1324ms)
+ GET /insights 200 in 570ms (compile: 69ms, render: 501ms)
+✓ Compiled in 233ms
+ GET /insights 200 in 65ms (compile: 5ms, render: 60ms)
+ GET /insights 200 in 407ms (compile: 23ms, render: 384ms)
+✓ Compiled in 7.5s
+ GET /insights 200 in 286ms (compile: 14ms, render: 271ms)
+ GET /insights 200 in 115ms (compile: 5ms, render: 110ms)
+✓ Compiled in 9.2s
+ GET / 200 in 2.5s (compile: 1183ms, render: 1329ms)

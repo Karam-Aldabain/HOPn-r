@@ -1,0 +1,42 @@
+{
+  "kind": "collectionType",
+  "collectionName": "partners",
+  "info": {
+    "singularName": "partner",
+    "pluralName": "partners",
+    "displayName": "Partner"
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "attributes": {
+    "name": {
+      "type": "string",
+      "required": true
+    },
+    "logo": {
+      "type": "media",
+      "multiple": false,
+      "required": false,
+      "allowedTypes": ["images"]
+    },
+    "url": {
+      "type": "string"
+    },
+    "partnership_type": {
+      "type": "enumeration",
+      "enum": ["Technology", "Academic", "Industry", "Community", "Other"]
+    },
+    "description": {
+      "type": "text"
+    },
+    "visible": {
+      "type": "boolean",
+      "default": true
+    },
+    "order": {
+      "type": "integer",
+      "default": 0
+    }
+  }
+}

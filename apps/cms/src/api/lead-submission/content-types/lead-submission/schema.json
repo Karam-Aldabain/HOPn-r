@@ -1,0 +1,44 @@
+{
+  "kind": "collectionType",
+  "collectionName": "lead_submissions",
+  "info": {
+    "singularName": "lead-submission",
+    "pluralName": "lead-submissions",
+    "displayName": "Lead Submission"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "attributes": {
+    "name": {
+      "type": "string",
+      "required": true
+    },
+    "email": {
+      "type": "email",
+      "required": true
+    },
+    "company": {
+      "type": "string"
+    },
+    "topic": {
+      "type": "enumeration",
+      "enum": ["Solutions", "Partnership", "Project", "Careers", "Other"]
+    },
+    "message": {
+      "type": "text"
+    },
+    "consent": {
+      "type": "boolean",
+      "default": false
+    },
+    "status": {
+      "type": "enumeration",
+      "enum": ["New", "Contacted", "Qualified", "Won", "Lost"],
+      "default": "New"
+    },
+    "notes": {
+      "type": "json"
+    }
+  }
+}

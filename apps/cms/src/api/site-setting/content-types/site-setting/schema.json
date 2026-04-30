@@ -1,0 +1,47 @@
+{
+  "kind": "singleType",
+  "collectionName": "site_settings",
+  "info": {
+    "singularName": "site-setting",
+    "pluralName": "site-settings",
+    "displayName": "Site Setting"
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "attributes": {
+    "brand_name": {
+      "type": "string"
+    },
+    "logo": {
+      "type": "media",
+      "multiple": false,
+      "required": false,
+      "allowedTypes": ["images"]
+    },
+    "favicon": {
+      "type": "media",
+      "multiple": false,
+      "required": false,
+      "allowedTypes": ["images"]
+    },
+    "footer_company_text": {
+      "type": "text"
+    },
+    "social_links": {
+      "type": "json"
+    },
+    "analytics_id": {
+      "type": "string"
+    },
+    "legal_imprint": {
+      "type": "richtext"
+    },
+    "legal_privacy": {
+      "type": "richtext"
+    },
+    "legal_cookie": {
+      "type": "richtext"
+    }
+  }
+}

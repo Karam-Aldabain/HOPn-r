@@ -1,0 +1,38 @@
+{
+  "collectionName": "components_content_sections",
+  "info": {
+    "displayName": "Section",
+    "icon": "layout"
+  },
+  "options": {},
+  "attributes": {
+    "type": {
+      "type": "enumeration",
+      "enum": [
+        "HeroBlock",
+        "RichTextBlock",
+        "CardsBlock",
+        "ProjectsPreviewBlock",
+        "PartnersCarouselBlock",
+        "CTASectionBlock",
+        "TeamGridBlock",
+        "ContactFormBlock",
+        "LogosGridBlock",
+        "DividerBlock",
+        "SpacerBlock"
+      ],
+      "required": true
+    },
+    "content_json": {
+      "type": "json"
+    },
+    "visible": {
+      "type": "boolean",
+      "default": true
+    },
+    "order": {
+      "type": "integer",
+      "default": 0
+    }
+  }
+}

@@ -1,0 +1,44 @@
+{
+  "kind": "collectionType",
+  "collectionName": "solutions",
+  "info": {
+    "singularName": "solution",
+    "pluralName": "solutions",
+    "displayName": "Solution"
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "attributes": {
+    "title": {
+      "type": "string",
+      "required": true
+    },
+    "description": {
+      "type": "text"
+    },
+    "problems": {
+      "type": "json"
+    },
+    "deliverables": {
+      "type": "json"
+    },
+    "icon": {
+      "type": "string"
+    },
+    "cta_label": {
+      "type": "string"
+    },
+    "cta_url": {
+      "type": "string"
+    },
+    "visible": {
+      "type": "boolean",
+      "default": true
+    },
+    "order": {
+      "type": "integer",
+      "default": 0
+    }
+  }
+}
