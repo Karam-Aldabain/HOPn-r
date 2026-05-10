@@ -1,9 +1,22 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { motion, useReducedMotion } from "framer-motion";
-import { ArrowRight, Mail, Phone, MapPin, Clock, Sparkles, Building2 } from "lucide-react";
+import {
+  ArrowRight,
+  Mail,
+  Phone,
+  MapPin,
+  Clock,
+  Sparkles,
+  Building2,
+} from "lucide-react";
 import { useCmsPageData } from "@/lib/use-cms-page-data";
+
+const API_BASE = (
+  process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
+).replace(/\/$/, "");
 
 function cn(...classes: Array<string | false | undefined | null>) {
   return classes.filter(Boolean).join(" ");
@@ -43,13 +56,13 @@ function GlassCard({
         "bg-[hsl(var(--card))]/80 backdrop-blur-xl",
         "border-[hsl(var(--border))]",
         "shadow-[0_24px_80px_rgba(0,0,0,0.45)]",
-        className
+        className,
       )}
     >
       <div
         className={cn(
-          "pointer-events-none absolute -inset-[1px] rounded-3xl opacity-70",
-          "bg-[radial-gradient(1200px_circle_at_15%_0%,rgba(34,211,238,0.22),transparent_45%),radial-gradient(900px_circle_at_90%_30%,rgba(99,102,241,0.18),transparent_45%),radial-gradient(900px_circle_at_20%_90%,rgba(139,92,246,0.14),transparent_45%)]"
+          "pointer-events-none absolute -inset-px rounded-3xl opacity-70",
+          "bg-[radial-gradient(1200px_circle_at_15%_0%,rgba(34,211,238,0.22),transparent_45%),radial-gradient(900px_circle_at_90%_30%,rgba(99,102,241,0.18),transparent_45%),radial-gradient(900px_circle_at_20%_90%,rgba(139,92,246,0.14),transparent_45%)]",
         )}
       />
       <div className="pointer-events-none absolute inset-0 rounded-3xl ring-1 ring-[hsl(var(--border))]" />
@@ -88,6 +101,83 @@ const defaultInfoCards = [
 
 export default function ContactPage() {
   const m = useMotion();
+
+  // --- Form state ---
+  // Each field gets its own state variable so React knows what the user typed.
+  // "status" drives the UI: idle → loading → success | error
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [company, setCompany] = useState("");
+  const [topic, setTopic] = useState("");
+  const [message, setMessage] = useState("");
+  const [consent, setConsent] = useState(false);
+  const [status, setStatus] = useState<
+    "idle" | "loading" | "success" | "error"
+  >("idle");
+  const [errorMsg, setErrorMsg] = useState("");
+
+  async function handleSubmit(e: React.FormEvent) {
+    // Prevent the browser's default "navigate to action URL" behaviour.
+    e.preventDefault();
+
+    // Basic client-side guard — the API will also validate, but this gives
+    // instant feedback without a round trip.
+    if (!name || !email || !topic || !message || !consent) {
+      setErrorMsg("Please fill in all required fields and accept the consent.");
+      setStatus("error");
+      return;
+    }
+
+    setStatus("loading");
+    setErrorMsg("");
+
+    try {
+      const res = await fetch(`${API_BASE}/api/leads`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        // The API's CreateLeadDto requires: name, email, topic, message, consent.
+        // company is optional.
+        body: JSON.stringify({
+          name,
+          email,
+          company: company || undefined,
+          topic,
+          message,
+          consent,
+        }),
+      });
+
+      if (!res.ok) {
+        // The API returns validation errors as JSON. Try to surface a useful message.
+        const text = await res.text();
+        let detail = "Something went wrong. Please try again.";
+        try {
+          const json = JSON.parse(text);
+          // NestJS validation errors come back as { message: string[] }
+          if (Array.isArray(json.message)) detail = json.message.join(", ");
+          else if (typeof json.message === "string") detail = json.message;
+        } catch {
+          // text wasn't JSON, just use the fallback
+        }
+        setErrorMsg(detail);
+        setStatus("error");
+        return;
+      }
+
+      // Everything went well — reset the form and show the success state.
+      setStatus("success");
+      setName("");
+      setEmail("");
+      setCompany("");
+      setTopic("");
+      setMessage("");
+      setConsent(false);
+    } catch {
+      setErrorMsg("Could not reach the server. Please check your connection.");
+      setStatus("error");
+    }
+  }
+
   const content = useCmsPageData("contact", {
     hero: {
       title: "Get In Touch With Us",
@@ -98,7 +188,8 @@ export default function ContactPage() {
     },
     availability: {
       title: "We respond within 24 hours",
-      subtitle: "Send us a message and we will follow up quickly with next steps.",
+      subtitle:
+        "Send us a message and we will follow up quickly with next steps.",
       stats: [
         { k: "Response", v: "< 24h" },
         { k: "Hours", v: "9am - 6pm" },
@@ -108,12 +199,14 @@ export default function ContactPage() {
     },
     form: {
       title: "Contact Form",
-      subtitle: "Send us a message directly. We aim to respond within 24 hours.",
+      subtitle:
+        "Send us a message directly. We aim to respond within 24 hours.",
       namePlaceholder: "e.g. Jane Doe",
       emailPlaceholder: "e.g. jane.doe@example.com",
       subjectPlaceholder: "e.g. AI Solution Inquiry",
       messagePlaceholder: "Tell us more about your needs or questions...",
-      consentText: "By submitting, you agree to our response and privacy policies.",
+      consentText:
+        "By submitting, you agree to our response and privacy policies.",
       submitLabel: "Send Message",
     },
     infoCards: defaultInfoCards.map((c) => ({
@@ -124,7 +217,13 @@ export default function ContactPage() {
     })),
   });
 
-  const iconMap: Record<string, any> = { Building2, Phone, Mail, MapPin, Clock };
+  const iconMap: Record<string, any> = {
+    Building2,
+    Phone,
+    Mail,
+    MapPin,
+    Clock,
+  };
   const infoCards = content.infoCards.map((card, idx) => {
     const fallback = defaultInfoCards[idx] ?? defaultInfoCards[0];
     const Icon = iconMap[(card as any).icon] || fallback.Icon;
@@ -194,7 +293,7 @@ export default function ContactPage() {
         <div className="absolute inset-0 opacity-[0.55] [background:radial-gradient(1200px_circle_at_10%_0%,rgba(34,211,238,0.18),transparent_45%),radial-gradient(900px_circle_at_90%_20%,rgba(99,102,241,0.18),transparent_45%),radial-gradient(900px_circle_at_40%_110%,rgba(139,92,246,0.14),transparent_50%)]" />
         <div className="absolute inset-0 contact-shimmer" />
         <div
-          className="absolute inset-0 [background-image:linear-gradient(to_right,var(--contact-grid)_1px,transparent_1px),linear-gradient(to_bottom,var(--contact-grid)_1px,transparent_1px)] [background-size:48px_48px]"
+          className="absolute inset-0 bg-[linear-gradient(to_right,var(--contact-grid)_1px,transparent_1px),linear-gradient(to_bottom,var(--contact-grid)_1px,transparent_1px)] bg-size-[48px_48px]"
           style={{ opacity: "var(--contact-grid-opacity)" as any }}
         />
         <div
@@ -227,23 +326,25 @@ export default function ContactPage() {
                 {content.hero.subtitle}
               </p>
 
-                <div className="flex flex-wrap items-center gap-3">
-                  <Link prefetch href="#services" className="btn-primary">
-                    {content.hero.primaryCta}
-                    <ArrowRight className="h-4 w-4" />
-                  </Link>
+              <div className="flex flex-wrap items-center gap-3">
+                <Link prefetch href="#services" className="btn-primary">
+                  {content.hero.primaryCta}
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
 
-                  <Link prefetch href="#contact" className="btn-secondary">
-                    {content.hero.secondaryCta}
-                    <ArrowRight className="h-4 w-4" />
-                  </Link>
-                </div>
+                <Link prefetch href="#contact" className="btn-secondary">
+                  {content.hero.secondaryCta}
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
+              </div>
             </div>
 
             <GlassCard className="p-5 md:p-6">
               <div className="flex items-start justify-between gap-4">
                 <div>
-                  <p className="text-xs text-[hsl(var(--muted))]">Availability</p>
+                  <p className="text-xs text-[hsl(var(--muted))]">
+                    Availability
+                  </p>
                   <p className="mt-1 text-lg font-semibold text-[hsl(var(--fg))]">
                     {content.availability.title}
                   </p>
@@ -262,8 +363,12 @@ export default function ContactPage() {
                     key={x.k}
                     className="rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--card))]/80 px-3 py-2"
                   >
-                    <p className="text-[11px] text-[hsl(var(--muted))]">{x.k}</p>
-                    <p className="text-sm font-semibold text-[hsl(var(--fg))]">{x.v}</p>
+                    <p className="text-[11px] text-[hsl(var(--muted))]">
+                      {x.k}
+                    </p>
+                    <p className="text-sm font-semibold text-[hsl(var(--fg))]">
+                      {x.v}
+                    </p>
                   </div>
                 ))}
               </div>
@@ -271,65 +376,136 @@ export default function ContactPage() {
           </div>
         </motion.section>
 
-        <motion.section {...m.reveal} className="mt-10 grid gap-6 md:grid-cols-[1.2fr_0.8fr]">
+        <motion.section
+          {...m.reveal}
+          className="mt-10 grid gap-6 md:grid-cols-[1.2fr_0.8fr]"
+        >
           <GlassCard>
             <div className="flex items-center gap-3">
               <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[hsl(var(--accent))]/10 ring-1 ring-[hsl(var(--accent))]/20">
                 <Mail className="h-5 w-5 text-[hsl(var(--accent))]" />
               </div>
               <div>
-                <h3 className="text-lg font-semibold text-[hsl(var(--fg))]">{content.form.title}</h3>
+                <h3 className="text-lg font-semibold text-[hsl(var(--fg))]">
+                  {content.form.title}
+                </h3>
                 <p className="text-sm text-[hsl(var(--muted))]">
                   {content.form.subtitle}
                 </p>
               </div>
             </div>
 
-            <form className="mt-6 grid gap-4">
-              <div className="grid gap-4 md:grid-cols-2">
-                <input
-                  className="w-full rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))]/80 px-4 py-3 text-sm text-[hsl(var(--fg))] placeholder:text-[hsl(var(--muted))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--ring))]"
-                  placeholder={content.form.namePlaceholder}
-                  type="text"
-                  name="name"
-                  autoComplete="name"
-                />
-                <input
-                  className="w-full rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))]/80 px-4 py-3 text-sm text-[hsl(var(--fg))] placeholder:text-[hsl(var(--muted))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--ring))]"
-                  placeholder={content.form.emailPlaceholder}
-                  type="email"
-                  name="email"
-                  autoComplete="email"
-                />
-              </div>
-              <input
-                className="w-full rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))]/80 px-4 py-3 text-sm text-[hsl(var(--fg))] placeholder:text-[hsl(var(--muted))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--ring))]"
-                placeholder={content.form.subjectPlaceholder}
-                type="text"
-                name="subject"
-                autoComplete="off"
-              />
-              <textarea
-                className="min-h-[150px] w-full rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))]/80 px-4 py-3 text-sm text-[hsl(var(--fg))] placeholder:text-[hsl(var(--muted))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--ring))]"
-                placeholder={content.form.messagePlaceholder}
-                name="message"
-              />
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <p className="text-xs text-[hsl(var(--muted))]">
-                  {content.form.consentText}
+            {/* Success state — replaces the form once submitted successfully */}
+            {status === "success" ? (
+              <div className="mt-6 rounded-2xl border border-green-500/30 bg-green-500/10 p-6 text-center">
+                <p className="text-base font-semibold text-green-400">
+                  Message sent!
+                </p>
+                <p className="mt-1 text-sm text-[hsl(var(--muted))]">
+                  We'll get back to you within 24 hours.
                 </p>
                 <button
-                  type="submit"
-                  className="inline-flex items-center gap-2 rounded-full px-5 py-3 text-sm font-semibold text-[hsl(var(--fg))] transition hover:brightness-110 focus:outline-none focus:ring-2 focus:ring-[rgba(96,165,250,0.45)]"
-                  style={{
-                    background: "linear-gradient(135deg, hsl(var(--accent-2)), hsl(var(--accent)))",
-                    boxShadow: "0 16px 70px rgba(96,165,250,0.33)",
-                  }}
+                  onClick={() => setStatus("idle")}
+                  className="mt-4 text-xs text-[hsl(var(--muted))] underline hover:text-[hsl(var(--fg))]"
                 >
-                  {content.form.submitLabel} <ArrowRight className="h-4 w-4" />
+                  Send another message
                 </button>
               </div>
-            </form>
+            ) : (
+              // onSubmit is the key addition — calls our handleSubmit instead of
+              // the browser's default form navigation.
+              <form className="mt-6 grid gap-4" onSubmit={handleSubmit}>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <input
+                    className="w-full rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))]/80 px-4 py-3 text-sm text-[hsl(var(--fg))] placeholder:text-[hsl(var(--muted))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--ring))]"
+                    placeholder={content.form.namePlaceholder}
+                    type="text"
+                    name="name"
+                    autoComplete="name"
+                    required
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                  />
+                  <input
+                    className="w-full rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))]/80 px-4 py-3 text-sm text-[hsl(var(--fg))] placeholder:text-[hsl(var(--muted))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--ring))]"
+                    placeholder={content.form.emailPlaceholder}
+                    type="email"
+                    name="email"
+                    autoComplete="email"
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                  />
+                </div>
+                {/* Company is optional — the API accepts it but doesn't require it */}
+                <input
+                  className="w-full rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))]/80 px-4 py-3 text-sm text-[hsl(var(--fg))] placeholder:text-[hsl(var(--muted))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--ring))]"
+                  placeholder="Company (optional)"
+                  type="text"
+                  name="company"
+                  autoComplete="organization"
+                  value={company}
+                  onChange={(e) => setCompany(e.target.value)}
+                />
+                {/* "subject" in the UI = "topic" in the API */}
+                <input
+                  className="w-full rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))]/80 px-4 py-3 text-sm text-[hsl(var(--fg))] placeholder:text-[hsl(var(--muted))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--ring))]"
+                  placeholder={content.form.subjectPlaceholder}
+                  type="text"
+                  name="topic"
+                  autoComplete="off"
+                  required
+                  value={topic}
+                  onChange={(e) => setTopic(e.target.value)}
+                />
+                <textarea
+                  className="min-h-37.5 w-full rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))]/80 px-4 py-3 text-sm text-[hsl(var(--fg))] placeholder:text-[hsl(var(--muted))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--ring))]"
+                  placeholder={content.form.messagePlaceholder}
+                  name="message"
+                  required
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
+                />
+
+                {/* Consent checkbox — required by the API (consent: true must be sent) */}
+                <label className="flex cursor-pointer items-start gap-3">
+                  <input
+                    type="checkbox"
+                    name="consent"
+                    required
+                    checked={consent}
+                    onChange={(e) => setConsent(e.target.checked)}
+                    className="mt-0.5 h-4 w-4 shrink-0 accent-[hsl(var(--accent))]"
+                  />
+                  <span className="text-xs text-[hsl(var(--muted))]">
+                    {content.form.consentText}
+                  </span>
+                </label>
+
+                {/* Inline error message */}
+                {status === "error" && errorMsg && (
+                  <p className="text-xs text-red-400">{errorMsg}</p>
+                )}
+
+                <div className="flex flex-wrap items-center justify-end gap-3">
+                  <button
+                    type="submit"
+                    disabled={status === "loading"}
+                    className="inline-flex items-center gap-2 rounded-full px-5 py-3 text-sm font-semibold text-[hsl(var(--fg))] transition hover:brightness-110 focus:outline-none focus:ring-2 focus:ring-[rgba(96,165,250,0.45)] disabled:opacity-60 disabled:cursor-not-allowed"
+                    style={{
+                      background:
+                        "linear-gradient(135deg, hsl(var(--accent-2)), hsl(var(--accent)))",
+                      boxShadow: "0 16px 70px rgba(96,165,250,0.33)",
+                    }}
+                  >
+                    {status === "loading"
+                      ? "Sending…"
+                      : content.form.submitLabel}
+                    {status !== "loading" && <ArrowRight className="h-4 w-4" />}
+                  </button>
+                </div>
+              </form>
+            )}
           </GlassCard>
 
           <div className="grid gap-5">
@@ -343,7 +519,9 @@ export default function ContactPage() {
                       <Icon className="h-5 w-5 text-[hsl(var(--accent))]" />
                     </div>
                     <div>
-                      <h3 className="text-base font-semibold text-[hsl(var(--fg))]">{card.title}</h3>
+                      <h3 className="text-base font-semibold text-[hsl(var(--fg))]">
+                        {card.title}
+                      </h3>
                       <div className="mt-3 space-y-1 text-sm text-[hsl(var(--muted))]">
                         {card.lines.map((line) => (
                           <div key={line} className="flex items-center gap-2">
@@ -367,12 +545,3 @@ export default function ContactPage() {
     </main>
   );
 }
-
-
-
-
-
-
-
-
-

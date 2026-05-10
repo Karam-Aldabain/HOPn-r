@@ -8,21 +8,20 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.LeadsService = void 0;
 const common_1 = require("@nestjs/common");
-const nodemailer_1 = __importDefault(require("nodemailer"));
 const prisma_service_1 = require("../../prisma/prisma.service");
 const audit_service_1 = require("../audit/audit.service");
+const mail_service_1 = require("../../common/mail/mail.service");
 let LeadsService = class LeadsService {
     prisma;
     audit;
-    constructor(prisma, audit) {
+    mail;
+    constructor(prisma, audit, mail) {
         this.prisma = prisma;
         this.audit = audit;
+        this.mail = mail;
     }
     findAll(filters) {
         const where = {};
@@ -116,42 +115,23 @@ let LeadsService = class LeadsService {
         return lead;
     }
     async sendLeadNotification(lead) {
+        // Check if lead notifications are explicitly disabled in the DB settings
         const setting = await this.prisma.setting.findUnique({ where: { key: "integrations" } });
-        const integrations = setting?.valueJson || {};
-        const emailCfg = integrations.emailNotifications || {};
+        const emailCfg = (setting?.valueJson || {}).emailNotifications || {};
         const enabled = typeof emailCfg.enabled === "boolean"
             ? emailCfg.enabled
             : String(process.env.LEAD_NOTIFY_ENABLED || "").toLowerCase() !== "false";
         if (!enabled)
             return;
+        // Who receives the notification — DB setting takes priority over env var
         const toRaw = emailCfg.to || process.env.LEAD_NOTIFY_TO || "info@hopn.eu";
         const toList = Array.isArray(toRaw)
             ? toRaw.filter(Boolean)
-            : String(toRaw)
-                .split(",")
-                .map((t) => t.trim())
-                .filter(Boolean);
+            : String(toRaw).split(",").map((t) => t.trim()).filter(Boolean);
         if (!toList.length)
             return;
-        const from = emailCfg.from || process.env.LEAD_NOTIFY_FROM || "no-reply@hopn.local";
-        const smtp = emailCfg.smtp || {};
-        const host = smtp.host || process.env.SMTP_HOST;
-        const port = Number(smtp.port || process.env.SMTP_PORT || 587);
-        const user = smtp.user || process.env.SMTP_USER;
-        const pass = smtp.pass || process.env.SMTP_PASS;
-        const secure = typeof smtp.secure === "boolean"
-            ? smtp.secure
-            : String(process.env.SMTP_SECURE || "").toLowerCase() === "true";
-        if (!host)
-            return;
-        const transporter = nodemailer_1.default.createTransport({
-            host,
-            port,
-            secure,
-            auth: user && pass ? { user, pass } : undefined,
-        });
         const subject = emailCfg.subject || `New lead: ${lead.name} (${lead.topic})`;
-        const lines = [
+        const text = [
             `Name: ${lead.name}`,
             `Email: ${lead.email}`,
             `Company: ${lead.company || "-"}`,
@@ -161,13 +141,8 @@ let LeadsService = class LeadsService {
             "",
             `Lead ID: ${lead.id}`,
             `Submitted: ${lead.createdAt.toISOString()}`,
-        ];
-        await transporter.sendMail({
-            from,
-            to: toList,
-            subject,
-            text: lines.join("\n"),
-        });
+        ].join("\n");
+        await this.mail.sendMail({ to: toList, subject, text });
     }
     async verifyCaptcha(token) {
         const setting = await this.prisma.setting.findUnique({ where: { key: "captcha_public" } });
@@ -202,6 +177,7 @@ exports.LeadsService = LeadsService;
 exports.LeadsService = LeadsService = __decorate([
     (0, common_1.Injectable)(),
     __metadata("design:paramtypes", [prisma_service_1.PrismaService,
-        audit_service_1.AuditService])
+        audit_service_1.AuditService,
+        mail_service_1.MailService])
 ], LeadsService);
 //# sourceMappingURL=leads.service.js.map
