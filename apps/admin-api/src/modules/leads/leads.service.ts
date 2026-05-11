@@ -1,7 +1,7 @@
 import { Injectable } from "@nestjs/common";
-import nodemailer from "nodemailer";
 import { PrismaService } from "../../prisma/prisma.service";
 import { AuditService } from "../audit/audit.service";
+import { MailService } from "../../common/mail/mail.service";
 import { CreateLeadDto } from "./dto/create-lead.dto";
 import { LeadStatus } from "@prisma/client";
 
@@ -10,6 +10,7 @@ export class LeadsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
+    private readonly mail: MailService,
   ) {}
 
   findAll(filters: { status?: string; topic?: string; from?: string; to?: string }) {
@@ -114,9 +115,9 @@ export class LeadsService {
     message: string;
     createdAt: Date;
   }) {
+    // Check if lead notifications are explicitly disabled in the DB settings
     const setting = await this.prisma.setting.findUnique({ where: { key: "integrations" } });
-    const integrations = (setting?.valueJson as any) || {};
-    const emailCfg = integrations.emailNotifications || {};
+    const emailCfg = ((setting?.valueJson as any) || {}).emailNotifications || {};
 
     const enabled =
       typeof emailCfg.enabled === "boolean"
@@ -124,39 +125,15 @@ export class LeadsService {
         : String(process.env.LEAD_NOTIFY_ENABLED || "").toLowerCase() !== "false";
     if (!enabled) return;
 
+    // Who receives the notification — DB setting takes priority over env var
     const toRaw = emailCfg.to || process.env.LEAD_NOTIFY_TO || "info@hopn.eu";
-    const toList = Array.isArray(toRaw)
+    const toList: string[] = Array.isArray(toRaw)
       ? toRaw.filter(Boolean)
-      : String(toRaw)
-          .split(",")
-          .map((t) => t.trim())
-          .filter(Boolean);
+      : String(toRaw).split(",").map((t) => t.trim()).filter(Boolean);
     if (!toList.length) return;
 
-    const from = emailCfg.from || process.env.LEAD_NOTIFY_FROM || "no-reply@hopn.local";
-
-    const smtp = emailCfg.smtp || {};
-    const host = smtp.host || process.env.SMTP_HOST;
-    const port = Number(smtp.port || process.env.SMTP_PORT || 587);
-    const user = smtp.user || process.env.SMTP_USER;
-    const pass = smtp.pass || process.env.SMTP_PASS;
-    const secure =
-      typeof smtp.secure === "boolean"
-        ? smtp.secure
-        : String(process.env.SMTP_SECURE || "").toLowerCase() === "true";
-
-    if (!host) return;
-
-    const transporter = nodemailer.createTransport({
-      host,
-      port,
-      secure,
-      auth: user && pass ? { user, pass } : undefined,
-    });
-
-    const subject =
-      emailCfg.subject || `New lead: ${lead.name} (${lead.topic})`;
-    const lines = [
+    const subject = emailCfg.subject || `New lead: ${lead.name} (${lead.topic})`;
+    const text = [
       `Name: ${lead.name}`,
       `Email: ${lead.email}`,
       `Company: ${lead.company || "-"}`,
@@ -166,14 +143,9 @@ export class LeadsService {
       "",
       `Lead ID: ${lead.id}`,
       `Submitted: ${lead.createdAt.toISOString()}`,
-    ];
+    ].join("\n");
 
-    await transporter.sendMail({
-      from,
-      to: toList,
-      subject,
-      text: lines.join("\n"),
-    });
+    await this.mail.sendMail({ to: toList, subject, text });
   }
 
   private async verifyCaptcha(token?: string) {

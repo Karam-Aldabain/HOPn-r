@@ -6,20 +6,20 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
     return c > 3 && r && Object.defineProperty(target, key, r), r;
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.LeadsModule = void 0;
+exports.MailModule = void 0;
 const common_1 = require("@nestjs/common");
-const leads_service_1 = require("./leads.service");
-const leads_controller_1 = require("./leads.controller");
-const audit_module_1 = require("../audit/audit.module");
-const mail_module_1 = require("../../common/mail/mail.module");
-let LeadsModule = class LeadsModule {
+const mail_service_1 = require("./mail.service");
+/**
+ * Import this module wherever you need to send email.
+ * It exports MailService so the importing module's providers can inject it.
+ */
+let MailModule = class MailModule {
 };
-exports.LeadsModule = LeadsModule;
-exports.LeadsModule = LeadsModule = __decorate([
+exports.MailModule = MailModule;
+exports.MailModule = MailModule = __decorate([
     (0, common_1.Module)({
-        imports: [audit_module_1.AuditModule, mail_module_1.MailModule],
-        providers: [leads_service_1.LeadsService],
-        controllers: [leads_controller_1.LeadsController],
+        providers: [mail_service_1.MailService],
+        exports: [mail_service_1.MailService],
     })
-], LeadsModule);
-//# sourceMappingURL=leads.module.js.map
+], MailModule);
+//# sourceMappingURL=mail.module.js.map

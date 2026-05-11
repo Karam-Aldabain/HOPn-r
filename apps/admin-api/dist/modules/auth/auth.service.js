@@ -49,14 +49,17 @@ const bcrypt = __importStar(require("bcryptjs"));
 const crypto_1 = require("crypto");
 const users_service_1 = require("../users/users.service");
 const prisma_service_1 = require("../../prisma/prisma.service");
+const mail_service_1 = require("../../common/mail/mail.service");
 let AuthService = class AuthService {
     usersService;
     jwtService;
     prisma;
-    constructor(usersService, jwtService, prisma) {
+    mail;
+    constructor(usersService, jwtService, prisma, mail) {
         this.usersService = usersService;
         this.jwtService = jwtService;
         this.prisma = prisma;
+        this.mail = mail;
     }
     async validateUser(email, password) {
         const user = await this.usersService.findByEmail(email);
@@ -103,21 +106,38 @@ let AuthService = class AuthService {
     }
     async forgotPassword(email) {
         const user = await this.usersService.findByEmail(email);
+        // Return ok:true even if user not found — avoids leaking which emails exist
         if (!user)
             return { ok: true };
         const token = (0, crypto_1.randomBytes)(32).toString("hex");
         const tokenHash = this.hashToken(token);
-        const expiresAt = new Date(Date.now() + 1000 * 60 * 60);
+        const expiresAt = new Date(Date.now() + 1000 * 60 * 60); // 1 hour
         await this.prisma.passwordResetToken.create({
-            data: {
-                userId: user.id,
-                tokenHash,
-                expiresAt,
-            },
+            data: { userId: user.id, tokenHash, expiresAt },
         });
-        // TODO: send email via SMTP provider. For now, log the token.
-        // eslint-disable-next-line no-console
-        console.log(`[Auth] Password reset token for ${email}: ${token}`);
+        // Build the reset URL. APP_URL should be set to the frontend origin,
+        // e.g. https://hopn.eu  The admin reset page lives at /admin/reset.
+        const appUrl = (process.env.APP_URL || "http://localhost:3000").replace(/\/$/, "");
+        const resetUrl = `${appUrl}/admin/reset?token=${token}`;
+        const sent = await this.mail.sendMail({
+            to: user.email,
+            subject: "HOPn — Password Reset",
+            text: [
+                `Hi ${user.name},`,
+                "",
+                "You requested a password reset. Click the link below to set a new password.",
+                "The link expires in 1 hour.",
+                "",
+                resetUrl,
+                "",
+                "If you did not request this, you can safely ignore this email.",
+            ].join("\n"),
+        });
+        if (!sent) {
+            // SMTP not configured yet — fall back to logging so local dev still works
+            // eslint-disable-next-line no-console
+            console.warn(`[Auth] SMTP not configured. Reset token for ${email}: ${token}`);
+        }
         return { ok: true };
     }
     async resetPassword(token, newPassword) {
@@ -156,6 +176,7 @@ exports.AuthService = AuthService = __decorate([
     (0, common_1.Injectable)(),
     __metadata("design:paramtypes", [users_service_1.UsersService,
         jwt_1.JwtService,
-        prisma_service_1.PrismaService])
+        prisma_service_1.PrismaService,
+        mail_service_1.MailService])
 ], AuthService);
 //# sourceMappingURL=auth.service.js.map

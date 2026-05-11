@@ -4,6 +4,7 @@ import * as bcrypt from "bcryptjs";
 import { randomBytes, createHash } from "crypto";
 import { UsersService } from "../users/users.service";
 import { PrismaService } from "../../prisma/prisma.service";
+import { MailService } from "../../common/mail/mail.service";
 
 @Injectable()
 export class AuthService {
@@ -11,6 +12,7 @@ export class AuthService {
     private readonly usersService: UsersService,
     private readonly jwtService: JwtService,
     private readonly prisma: PrismaService,
+    private readonly mail: MailService,
   ) {}
 
   async validateUser(email: string, password: string) {
@@ -62,20 +64,43 @@ export class AuthService {
 
   async forgotPassword(email: string) {
     const user = await this.usersService.findByEmail(email);
+    // Return ok:true even if user not found — avoids leaking which emails exist
     if (!user) return { ok: true };
+
     const token = randomBytes(32).toString("hex");
     const tokenHash = this.hashToken(token);
-    const expiresAt = new Date(Date.now() + 1000 * 60 * 60);
+    const expiresAt = new Date(Date.now() + 1000 * 60 * 60); // 1 hour
+
     await this.prisma.passwordResetToken.create({
-      data: {
-        userId: user.id,
-        tokenHash,
-        expiresAt,
-      },
+      data: { userId: user.id, tokenHash, expiresAt },
     });
-    // TODO: send email via SMTP provider. For now, log the token.
-    // eslint-disable-next-line no-console
-    console.log(`[Auth] Password reset token for ${email}: ${token}`);
+
+    // Build the reset URL. APP_URL should be set to the frontend origin,
+    // e.g. https://hopn.eu  The admin reset page lives at /admin/reset.
+    const appUrl = (process.env.APP_URL || "http://localhost:3000").replace(/\/$/, "");
+    const resetUrl = `${appUrl}/admin/reset?token=${token}`;
+
+    const sent = await this.mail.sendMail({
+      to: user.email,
+      subject: "HOPn — Password Reset",
+      text: [
+        `Hi ${user.name},`,
+        "",
+        "You requested a password reset. Click the link below to set a new password.",
+        "The link expires in 1 hour.",
+        "",
+        resetUrl,
+        "",
+        "If you did not request this, you can safely ignore this email.",
+      ].join("\n"),
+    });
+
+    if (!sent) {
+      // SMTP not configured yet — fall back to logging so local dev still works
+      // eslint-disable-next-line no-console
+      console.warn(`[Auth] SMTP not configured. Reset token for ${email}: ${token}`);
+    }
+
     return { ok: true };
   }
 
